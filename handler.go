@@ -7,7 +7,6 @@ import (
 	"net/http"
 )
 
-// f
 type Handler struct {
 	config Config
 	log    *zap.Logger
