@@ -1,14 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/peterbourgon/ff/v3"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
-	authentication "k8s.io/api/authentication/v1beta1"
 	"net/http"
 	"os"
 )
@@ -29,22 +27,6 @@ func (c Config) FindToken(t string) (*TokenConfig, error) {
 	}
 
 	return &token, nil
-}
-
-func handleErr(l *zap.Logger, w http.ResponseWriter, status int, err error) {
-	l.Error("writing http err response", zap.Error(err), zap.Int("status", status))
-	w.WriteHeader(status)
-	enc := json.NewEncoder(w)
-
-	res := authentication.TokenReview{}
-	res.APIVersion = "authentication.k8s.io/v1beta1"
-	res.Kind = "TokenReview"
-	res.Status = authentication.TokenReviewStatus{Authenticated: false, Error: err.Error()}
-
-	err = enc.Encode(res)
-	if err != nil {
-		l.Error("an error occured writing the error response", zap.Error(err))
-	}
 }
 
 func main() {
@@ -75,45 +57,13 @@ func main() {
 		log.Fatal("failed to load config file", zap.Error(err))
 	}
 
+	h := &Handler{
+		config: c,
+		log:    log,
+	}
+
 	mux := http.NewServeMux()
-
-	mux.HandleFunc("/authenticate", func(w http.ResponseWriter, r *http.Request) {
-		decoder := json.NewDecoder(r.Body)
-		var tr authentication.TokenReview
-		err := decoder.Decode(&tr)
-		if err != nil {
-			handleErr(log, w, http.StatusBadRequest, err)
-			return
-		}
-		log.Info("token authentication request received", zap.Any("body", tr))
-
-		t, err := c.FindToken(tr.Spec.Token)
-		if err != nil {
-			handleErr(log, w, http.StatusUnauthorized, err)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-		enc := json.NewEncoder(w)
-
-		res := authentication.TokenReview{}
-		res.APIVersion = "authentication.k8s.io/v1beta1"
-		res.Kind = "TokenReview"
-		res.Status = authentication.TokenReviewStatus{
-			Authenticated: true,
-			User: authentication.UserInfo{
-				Username: t.User,
-				Groups:   t.Groups,
-			},
-		}
-
-		log.Info("authenticated successfully, writing response", zap.Any("res", res))
-
-		err = enc.Encode(res)
-		if err != nil {
-			log.Error("failed to write success response", zap.Error(err))
-		}
-	})
+	mux.Handle("/authenticate", h)
 
 	log.Info("listening", zap.String("address", *listenAddress))
 	err = http.ListenAndServe(*listenAddress, mux)
