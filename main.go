@@ -57,13 +57,13 @@ func main() {
 		log.Fatal("failed to load config file", zap.Error(err))
 	}
 
-	h := &Handler{
+	handler := &Handler{
 		config: c,
 		log:    log,
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/authenticate", h)
+	mux.Handle("/authenticate", handler)
 
 	log.Info("listening", zap.String("address", *listenAddress))
 	err = http.ListenAndServe(*listenAddress, mux)
