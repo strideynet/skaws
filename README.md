@@ -1,5 +1,7 @@
 # skaws
 
+Static Kubernetes Authentication Webhook Server
+
 Skaws is an implementation of a Webhook token auth provider for Kubernetes as
 described by https://kubernetes.io/docs/reference/access-authn-authz/authentication/#webhook-token-authentication
 
