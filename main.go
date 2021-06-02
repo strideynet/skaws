@@ -56,7 +56,7 @@ func main() {
 	fs := flag.NewFlagSet("skaws", flag.ExitOnError)
 	var (
 		listenAddress = fs.String("listen-addr", ":8080", "listen address (also via LISTEN_ADDRESS)")
-		configPath    = fs.String("config-path", "/tokens.yaml", "config path (also via CONFIG_PATH)")
+		configPath    = fs.String("config-path", "./example.yaml", "config path (also via CONFIG_PATH)")
 	)
 	err = ff.Parse(fs, os.Args[1:], ff.WithEnvVarNoPrefix())
 	if err != nil {
@@ -93,7 +93,6 @@ func main() {
 			return
 		}
 
-		log.Info("authenticated successfully, writing response")
 		w.WriteHeader(http.StatusOK)
 		enc := json.NewEncoder(w)
 
@@ -107,6 +106,8 @@ func main() {
 				Groups:   t.Groups,
 			},
 		}
+
+		log.Info("authenticated successfully, writing response", zap.Any("res", res))
 
 		err = enc.Encode(res)
 		if err != nil {

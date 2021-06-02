@@ -1,0 +1,7 @@
+tokens:
+  valid-system-master-token:
+    user: noah@noahstride.co.uk
+    groups:
+    - system:masters
+  valid-token:
+    user: johndoe@example.com
