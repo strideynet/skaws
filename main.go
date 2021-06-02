@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/peterbourgon/ff/v3"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	authentication "k8s.io/api/authentication/v1beta1"
 	"net/http"
 	"os"
@@ -61,8 +63,17 @@ func main() {
 		log.Fatal("failed to parse config", zap.Error(err))
 	}
 
+	log.Info("loading config", zap.String("path", *configPath))
 	c := Config{}
-	// TODO: Fetch config from YAML
+	configFileBytes, err := ioutil.ReadFile(*configPath)
+	if err != nil {
+		log.Fatal("failed to load config file", zap.Error(err))
+	}
+
+	err = yaml.Unmarshal(configFileBytes, &c)
+	if err != nil {
+		log.Fatal("failed to load config file", zap.Error(err))
+	}
 
 	mux := http.NewServeMux()
 
@@ -74,6 +85,7 @@ func main() {
 			handleErr(log, w, http.StatusBadRequest, err)
 			return
 		}
+		log.Info("token authentication request received", zap.Any("body", tr))
 
 		t, err := c.FindToken(tr.Spec.Token)
 		if err != nil {
@@ -81,6 +93,7 @@ func main() {
 			return
 		}
 
+		log.Info("authenticated successfully, writing response")
 		w.WriteHeader(http.StatusOK)
 		enc := json.NewEncoder(w)
 
